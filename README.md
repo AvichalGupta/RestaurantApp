@@ -39,4 +39,13 @@ Users with adequate permissions can perform CRUD operations on restaurant listin
 
 We have provided detailed documentation on Postman for all API endpoints, including examples of requests and responses. Please refer to our Postman collection for a comprehensive understanding of how to interact with our application.
 
+## Steps to run this repo
+
+Firstly, clone this repo using git clone command.
+Next run the npm install command to install all dependencies.
+Finally run the command to start the application: npm run start:dev
+
+The application runs on port 3000 by default. 
+Use the sample env file attached to create your own .env file.
+
 Thanks!

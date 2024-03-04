@@ -63,7 +63,12 @@ export class LoginServiceService {
       const parsedDataFromFile: Record<string, userSchema> =
         this.utils.getParsedData(fileData);
 
-      if (!parsedDataFromFile[verificationResponse.email]) {
+      if (
+        !parsedDataFromFile[verificationResponse.email] ||
+        parsedDataFromFile[verificationResponse.email].authToken !== token ||
+        parsedDataFromFile[verificationResponse.email].role !==
+          verificationResponse.userRole
+      ) {
         throw new Error(LoginErrorResponse.LF10);
       }
       return verificationResponse;
