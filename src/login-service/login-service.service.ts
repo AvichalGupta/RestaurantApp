@@ -32,11 +32,11 @@ export class LoginServiceService {
   }
 
   private comparePasswords(
+    passwordEntered: string,
     passwordFromDB: string,
-    hashedPassword: string,
   ): boolean {
     if (!passwordFromDB) throw new Error(LoginErrorResponse.LF3);
-    return bcrypt.compareSync(passwordFromDB, hashedPassword);
+    return bcrypt.compareSync(passwordEntered, passwordFromDB);
   }
 
   private async createJWTToken(email: string, userRole: Roles) {
@@ -93,10 +93,7 @@ export class LoginServiceService {
     const { password: passwordFromDB, role: userRole } =
       parsedDataFromFile[email];
 
-    const doesPasswordMatch = this.comparePasswords(
-      passwordFromDB,
-      this.hashPassword(password),
-    );
+    const doesPasswordMatch = this.comparePasswords(password, passwordFromDB);
 
     if (!doesPasswordMatch) {
       throw new Error(LoginErrorResponse.LF2);

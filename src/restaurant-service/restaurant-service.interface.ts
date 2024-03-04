@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import * as Joi from 'joi';
 import { Roles } from 'src/login-service/login-service.interface';
 
 export interface restaurantSchema {
@@ -6,9 +6,11 @@ export interface restaurantSchema {
   contactNo?: string;
   contactAddress?: string;
   images?: string[];
-  isActive?: boolean;
+  isActive?: boolean | string;
   updatedListingName?: string;
   imageType?: ImageOperations;
+  createdBy?: string;
+  userRole?: Roles;
 }
 
 export interface reviewSchema extends AddReviewSchema {
@@ -24,12 +26,12 @@ export interface editReviewAPISchema extends AddReviewSchema {
 export interface AddReviewSchema {
   review: string;
   reviewId: string;
-  userEmail: string;
-  userRole: Roles;
 }
 
 export interface ReplyReviewSchema extends AddReviewSchema {
   replies: Record<string, ReplySchema>;
+  userEmail?: string;
+  userRole?: Roles;
 }
 
 export interface ReplySchema {
@@ -57,18 +59,16 @@ export enum ImageOperations {
 
 export const listingInsertAPISchema = Joi.object({
   listingName: Joi.string().min(5).required(),
-  contactNo: Joi.string().pattern(new RegExp('/^+91[6-9]d{9}$/')).required(),
+  contactNo: Joi.string().min(10).required(),
   contactAddress: Joi.string().min(20).max(120).required(),
-  images: Joi.array().min(1).required(),
 }).unknown(false);
 
 export const listingModifyAPISchema = Joi.object({
   listingName: Joi.string().required(),
   updatedListingName: Joi.string().min(5).optional(),
-  contactNo: Joi.string().pattern(new RegExp('/^+91[6-9]d{9}$/')).optional(),
+  contactNo: Joi.string().min(10).optional(),
   contactAddress: Joi.string().min(20).max(120).optional(),
-  images: Joi.array().optional(),
-  isActive: Joi.boolean().optional(),
+  isActive: Joi.string().valid('true', 'false').optional(),
   imageType: Joi.string()
     .valid(...Object.values(ImageOperations))
     .optional(),
@@ -81,8 +81,8 @@ export const reviewInsertAPISchema = Joi.object({
 
 export const reviewUpdateAPISchema = Joi.object({
   listingName: Joi.string().min(5).required(),
-  review: Joi.string().min(15).max(150).required(),
-  reviewId: Joi.string().required(),
+  review: Joi.string().min(15).max(150).optional(),
+  reviewId: Joi.string().optional(),
   replyReview: Joi.string().min(15).max(150).optional(),
   replyReviewId: Joi.string().optional(),
 }).unknown(false);

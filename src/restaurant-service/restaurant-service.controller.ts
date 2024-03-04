@@ -3,11 +3,14 @@ import {
   Get,
   Body,
   Res,
+  Req,
   Post,
   Put,
   Delete,
   UsePipes,
-  Param,
+  UseInterceptors,
+  UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { UtilityService } from 'src/utility/utility.service';
 import { RestaurantServiceService } from './restaurant-service.service';
@@ -21,7 +24,7 @@ import {
   reviewSchema,
   reviewUpdateAPISchema,
 } from './restaurant-service.interface';
-
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 @Controller({
   path: 'restaurants',
 })
@@ -44,13 +47,21 @@ export class RestaurantServiceController {
 
   @Post('listing/create')
   @UsePipes(new RestaurantServicePipe(listingInsertAPISchema))
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
   public createRestaurantListing(
+    @UploadedFiles() files,
     @Body() payload: restaurantSchema,
+    @Req() req,
     @Res() res,
   ) {
     try {
       const createListingAPIResponse =
-        this.restaurantService.createRestaurantListing(payload);
+        this.restaurantService.createRestaurantListing(
+          payload,
+          files.images,
+          req.userEmail,
+          req.userRole,
+        );
       return this.utils.handleSuccessResponse(res, createListingAPIResponse);
     } catch (err) {
       return this.utils.handleFailureResponse(res, err);
@@ -59,13 +70,21 @@ export class RestaurantServiceController {
 
   @Put('listing/modify')
   @UsePipes(new RestaurantServicePipe(listingModifyAPISchema))
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 5 }]))
   public modifyRestaurantListing(
+    @UploadedFiles() files,
     @Body() payload: restaurantSchema,
+    @Req() req,
     @Res() res,
   ) {
     try {
       const modifyListingAPIResponse =
-        this.restaurantService.modifyRestaurantListing(payload);
+        this.restaurantService.modifyRestaurantListing(
+          payload,
+          files.images,
+          req.userEmail,
+          req.userRole,
+        );
       return this.utils.handleSuccessResponse(res, modifyListingAPIResponse);
     } catch (err) {
       return this.utils.handleFailureResponse(res, err);
@@ -74,7 +93,7 @@ export class RestaurantServiceController {
 
   @Delete('listing/remove')
   public deleteRestaurantListing(
-    @Param('listingName') listingName: string,
+    @Query('listingName') listingName: string,
     @Res() res,
   ) {
     try {
@@ -88,7 +107,7 @@ export class RestaurantServiceController {
 
   @Get('review/fetch')
   public fetchReviewsByListingName(
-    @Param('listingName') listingName: string,
+    @Query('listingName') listingName: string,
     @Res() res,
   ) {
     try {
@@ -102,12 +121,21 @@ export class RestaurantServiceController {
 
   @Post('review/add')
   @UsePipes(new RestaurantServicePipe(reviewInsertAPISchema))
-  public createRestaurantReview(@Body() payload: reviewSchema, @Res() res) {
+  public createRestaurantReview(
+    @Body() payload: reviewSchema,
+    @Req() req,
+    @Res() res,
+  ) {
     try {
       const createReviewAPIResponse =
-        this.restaurantService.createRestaurantReview(payload);
+        this.restaurantService.createRestaurantReview(
+          payload,
+          req.userEmail,
+          req.userRole,
+        );
       return this.utils.handleSuccessResponse(res, createReviewAPIResponse);
     } catch (err) {
+      console.log(err);
       return this.utils.handleFailureResponse(res, err);
     }
   }
@@ -116,11 +144,16 @@ export class RestaurantServiceController {
   @UsePipes(new RestaurantServicePipe(reviewUpdateAPISchema))
   public modifyRestaurantReview(
     @Body() payload: editReviewAPISchema,
+    @Req() req,
     @Res() res,
   ) {
     try {
       const modifyReviewAPIResponse =
-        this.restaurantService.modifyRestaurantReview(payload);
+        this.restaurantService.modifyRestaurantReview(
+          payload,
+          req.userEmail,
+          req.userRole,
+        );
       return this.utils.handleSuccessResponse(res, modifyReviewAPIResponse);
     } catch (err) {
       return this.utils.handleFailureResponse(res, err);
@@ -129,8 +162,8 @@ export class RestaurantServiceController {
 
   @Delete('review/delete')
   public deleteRestaurantReview(
-    @Param('reviewId') reviewId: string,
-    @Param('listingName') listingName: string,
+    @Query('reviewId') reviewId: string,
+    @Query('listingName') listingName: string,
     @Body() body,
     @Res() res,
   ) {

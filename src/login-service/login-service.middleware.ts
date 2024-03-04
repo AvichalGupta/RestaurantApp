@@ -19,17 +19,25 @@ export class LoginServiceMiddleware implements NestMiddleware {
     if (!headers['x-auth-token']) {
       throw new HttpException(LoginErrorResponse.LF5, HttpStatus.UNAUTHORIZED);
     }
-    const authToken = headers['x-auth-token'];
-    const { email, userRole }: JWTPayload =
-      await this.loginService.verifyToken(authToken);
-    req.body.userEmail = email;
-    req.body.userRole = userRole;
-    const endpoint = req.route.path;
-    const canUserAccessResource: boolean = this.utils.checkPermission(
-      endpoint,
-      userRole,
-    );
-    if (!canUserAccessResource) throw new Error(LoginErrorResponse.LF9);
+    try {
+      const authToken = headers['x-auth-token'];
+      const { email, userRole }: JWTPayload =
+        await this.loginService.verifyToken(authToken);
+      req.userEmail = email;
+      req.userRole = userRole;
+      const endpoint = req.originalUrl || req.url;
+      const canUserAccessResource: boolean = this.utils.checkPermission(
+        endpoint,
+        userRole,
+      );
+      if (!canUserAccessResource)
+        throw new HttpException(
+          LoginErrorResponse.LF9,
+          HttpStatus.UNAUTHORIZED,
+        );
+    } catch (err) {
+      throw new HttpException(err.message, HttpStatus.UNAUTHORIZED);
+    }
     next();
   }
 }

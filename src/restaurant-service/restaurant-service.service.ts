@@ -66,11 +66,16 @@ export class RestaurantServiceService {
     };
   }
 
-  public createRestaurantListing(payload: restaurantSchema) {
-    const { listingName, contactNo, contactAddress, images } = payload;
+  public createRestaurantListing(
+    payload: restaurantSchema,
+    files: Express.Multer.File[],
+    userEmail: string,
+    userRole: Roles,
+  ) {
+    const { listingName, contactNo, contactAddress } = payload;
     const filePath = join(process.cwd(), '/src/sample-db/restaurants.json');
     const fileData = fs.readFileSync(filePath, 'utf-8');
-    let parsedDataFromFile: Record<string, restaurantSchema>;
+    let parsedDataFromFile: Record<string, restaurantSchema> = {};
     if (fileData.length) {
       parsedDataFromFile = this.utils.getParsedData(fileData);
       for (const listingDetails of Object.values(parsedDataFromFile)) {
@@ -82,8 +87,13 @@ export class RestaurantServiceService {
       listingName,
       contactNo,
       contactAddress,
-      images,
+      images: files?.map((file) => {
+        const base64String = file.buffer.toString('base64');
+        return base64String;
+      }) || [''],
       isActive: true,
+      createdBy: userEmail,
+      userRole,
     };
 
     const stringifiedFileData: string = JSON.stringify(parsedDataFromFile);
@@ -101,7 +111,12 @@ export class RestaurantServiceService {
     }
   }
 
-  public modifyRestaurantListing(payload: restaurantSchema) {
+  public modifyRestaurantListing(
+    payload: restaurantSchema,
+    files: Express.Multer.File[],
+    userEmail: string,
+    userRole: Roles,
+  ) {
     const filePath = join(process.cwd(), '/src/sample-db/restaurants.json');
     const fileData = fs.readFileSync(filePath, 'utf-8');
     if (!fileData.length) throw new Error(RestaurantErrorResponse.L5);
@@ -112,28 +127,45 @@ export class RestaurantServiceService {
     const existingData = parsedDataFromFile[payload.listingName];
     if (!existingData) throw new Error(RestaurantErrorResponse.L5);
 
-    if (!existingData.isActive) throw new Error(RestaurantErrorResponse.L7);
+    if (!existingData.isActive && !('isActive' in payload))
+      throw new Error(RestaurantErrorResponse.L7);
 
     this.validateListingDetails(existingData, payload, true);
 
     const dataToBeUpdated = {
-      listingName: payload?.updatedListingName || existingData.listingName,
-      contactNo: payload?.contactNo || existingData.contactNo,
+      listingName: payload.updatedListingName || existingData.listingName,
+      contactNo: payload.contactNo || existingData.contactNo,
       contactAddress: payload.contactAddress || existingData.contactAddress,
       images: existingData.images,
+      isActive: existingData.isActive,
+      updatedBy: userEmail,
+      userRole,
     };
 
+    parsedDataFromFile[dataToBeUpdated.listingName] = dataToBeUpdated;
+
+    if (!existingData.isActive && payload.isActive == 'true')
+      dataToBeUpdated.isActive = true;
+
     if (payload.imageType == ImageOperations.insert) {
-      if (!payload.images.length) throw new Error(RestaurantErrorResponse.L6);
+      if (!files?.length) throw new Error(RestaurantErrorResponse.L6);
       if (!parsedDataFromFile[dataToBeUpdated.listingName].images?.length) {
-        parsedDataFromFile[dataToBeUpdated.listingName].images = payload.images;
+        parsedDataFromFile[dataToBeUpdated.listingName].images = files.map(
+          (file) => {
+            const base64String = file.buffer.toString('base64');
+            return base64String;
+          },
+        );
       } else {
         parsedDataFromFile[dataToBeUpdated.listingName].images.push(
-          ...payload.images,
+          ...files.map((file) => {
+            const base64String = file.buffer.toString('base64');
+            return base64String;
+          }),
         );
       }
     } else if (payload.imageType == ImageOperations.remove) {
-      parsedDataFromFile[dataToBeUpdated.listingName].images = [];
+      parsedDataFromFile[dataToBeUpdated.listingName].images = [''];
     }
 
     if (payload.updatedListingName)
@@ -161,7 +193,6 @@ export class RestaurantServiceService {
 
     const parsedDataFromFile: Record<string, restaurantSchema> =
       this.utils.getParsedData(fileData);
-
     const existingData = parsedDataFromFile[listingName];
     if (!existingData) throw new Error(RestaurantErrorResponse.L5);
 
@@ -217,7 +248,11 @@ export class RestaurantServiceService {
     };
   }
 
-  public createRestaurantReview(payload: reviewSchema) {
+  public createRestaurantReview(
+    payload: reviewSchema,
+    userEmail: string,
+    userRole: Roles,
+  ) {
     const listingFilePath = join(
       process.cwd(),
       '/src/sample-db/restaurants.json',
@@ -228,7 +263,10 @@ export class RestaurantServiceService {
     const parsedListingDataFromFile: Record<string, restaurantSchema> =
       this.utils.getParsedData(listingFileData);
 
-    if (!parsedListingDataFromFile[payload.listingName])
+    if (
+      !parsedListingDataFromFile[payload.listingName] ||
+      !parsedListingDataFromFile[payload.listingName].isActive
+    )
       throw new Error(RestaurantErrorResponse.R2);
 
     const reviewsFilePath = join(process.cwd(), '/src/sample-db/reviews.json');
@@ -237,7 +275,7 @@ export class RestaurantServiceService {
     let parsedReviewsDataFromFile: Record<
       string,
       Record<string, ReplyReviewSchema>
-    >;
+    > = {};
 
     const generatedReviewId = this.generateID();
 
@@ -248,12 +286,21 @@ export class RestaurantServiceService {
     const reviewToBeAdded: ReplyReviewSchema = {
       reviewId: generatedReviewId,
       review: payload.review,
-      userEmail: payload.userEmail,
-      userRole: payload.userRole,
+      userEmail: userEmail,
+      userRole: userRole,
       replies: {},
     };
-    parsedReviewsDataFromFile[payload.listingName][generatedReviewId] =
-      reviewToBeAdded;
+
+    if (
+      Object.keys(parsedReviewsDataFromFile[payload.listingName] || {}).length
+    ) {
+      parsedReviewsDataFromFile[payload.listingName][generatedReviewId] =
+        reviewToBeAdded;
+    } else {
+      parsedReviewsDataFromFile[payload.listingName] = {
+        [generatedReviewId]: reviewToBeAdded,
+      };
+    }
 
     const stringifiedFileData: string = JSON.stringify(
       parsedReviewsDataFromFile,
@@ -272,7 +319,11 @@ export class RestaurantServiceService {
     }
   }
 
-  public modifyRestaurantReview(payload: editReviewAPISchema) {
+  public modifyRestaurantReview(
+    payload: editReviewAPISchema,
+    userEmail: string,
+    userRole: Roles,
+  ) {
     const listingFilePath = join(
       process.cwd(),
       '/src/sample-db/restaurants.json',
@@ -283,7 +334,10 @@ export class RestaurantServiceService {
     const parsedListingDataFromFile: Record<string, restaurantSchema> =
       this.utils.getParsedData(listingFileData);
 
-    if (!parsedListingDataFromFile[payload.listingName])
+    if (
+      !parsedListingDataFromFile[payload.listingName] ||
+      !parsedListingDataFromFile[payload.listingName].isActive
+    )
       throw new Error(RestaurantErrorResponse.R2);
 
     const reviewsFilePath = join(process.cwd(), '/src/sample-db/reviews.json');
@@ -299,19 +353,23 @@ export class RestaurantServiceService {
     if (!parsedReviewsDataFromFile[payload.listingName][payload.reviewId])
       throw new Error(RestaurantErrorResponse.R3);
 
-    if (payload.userRole == Roles.bo) {
+    if (userRole == Roles.bo) {
       const replyReviewId: string = this.generateID();
       parsedReviewsDataFromFile[payload.listingName][payload.reviewId].replies[
         replyReviewId
       ] = {
         replyReview: payload.replyReview,
-        userEmail: payload.userEmail,
+        userEmail: userEmail,
       };
     } else {
+      const existingData =
+        parsedReviewsDataFromFile[payload.listingName][payload.reviewId];
       parsedReviewsDataFromFile[payload.listingName][payload.reviewId] = {
         review: payload.review,
-        userEmail: payload.userEmail,
-        userRole: payload.userRole,
+        userEmail: userEmail,
+        userRole: userRole,
+        reviewId: existingData.reviewId,
+        replies: existingData.replies,
       };
     }
 
@@ -343,7 +401,10 @@ export class RestaurantServiceService {
     const parsedListingDataFromFile: Record<string, restaurantSchema> =
       this.utils.getParsedData(listingFileData);
 
-    if (!parsedListingDataFromFile[listingName])
+    if (
+      !parsedListingDataFromFile[listingName] ||
+      !parsedListingDataFromFile[listingName].isActive
+    )
       throw new Error(RestaurantErrorResponse.R2);
 
     const reviewsFilePath = join(process.cwd(), '/src/sample-db/reviews.json');

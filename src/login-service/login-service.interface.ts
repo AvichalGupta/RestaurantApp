@@ -48,10 +48,7 @@ export const loginAPISchema = Joi.object({
 
 export const signupAPISchema = Joi.object({
   email: Joi.string().email().required(),
-  password: Joi.string()
-    .min(8)
-    .pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*]{8,30}$'))
-    .required(),
+  password: Joi.string().min(8).required(),
   role: Joi.string()
     .valid(...Object.values(Roles))
     .required(),

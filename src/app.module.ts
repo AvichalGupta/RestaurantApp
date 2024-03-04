@@ -25,6 +25,7 @@ export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(LoginServiceMiddleware)
-      .exclude({ path: 'auth', method: RequestMethod.ALL });
+      .exclude({ path: 'auth', method: RequestMethod.ALL })
+      .forRoutes({ path: 'restaurants*', method: RequestMethod.ALL });
   }
 }
