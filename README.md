@@ -1,6 +1,6 @@
 # Restaurant Listing and Review Application with Role Based Authentication
 
-Welcome to our Restaurant Listing and Review Application with Role Based Authentication (RBA). This README will provide a walkthrough for the functionalities and usage of tnis application.
+This is the Restaurant Listing and Review Application with Role Based Authentication (RBA). This README will provide a walkthrough for the functionalities and usage of tnis application.
 
 ## Introduction
 
@@ -37,7 +37,9 @@ Users with adequate permissions can perform CRUD operations on restaurant listin
 
 ## Postman Documentation
 
-We have provided detailed documentation on Postman for all API endpoints, including examples of requests and responses. Please refer to our Postman collection for a comprehensive understanding of how to interact with our application.
+I have provided detailed documentation on Postman for all API endpoints, including examples of requests and responses. Please refer to our Postman collection for a comprehensive understanding of how to interact with our application.
+
+Postman Collection Public Link: [Restaurant App Postman Collection](https://www.postman.com/warped-shadow-699895/workspace/zag-restaurant-app/collection/9020780-81071a70-51a8-4395-98ba-9967f552204f?action=share&creator=9020780)
 
 ## Steps to run this repo
 
